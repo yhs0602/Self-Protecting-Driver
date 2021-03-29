@@ -17,6 +17,10 @@ Environment:
 #include "driver.h"
 #include "driver.tmh"
 
+
+NTSTATUS InstallSelfProtect();
+VOID UnInstallSelfProtect();
+
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
 #pragma alloc_text (PAGE, KMDFDriver1EvtDeviceAdd)
@@ -88,6 +92,9 @@ Return Value:
         WPP_CLEANUP(DriverObject);
         return status;
     }
+
+    InstallSelfProtect();
+
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
 
@@ -161,5 +168,8 @@ Return Value:
     //
     // Stop WPP Tracing
     //
+
+    UnInstallSelfProtect();
+
     WPP_CLEANUP(WdfDriverWdmGetDriverObject((WDFDRIVER)DriverObject));
 }
