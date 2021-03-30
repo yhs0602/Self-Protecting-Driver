@@ -21,6 +21,9 @@ Environment:
 NTSTATUS InstallSelfProtect();
 VOID UnInstallSelfProtect();
 
+NTSTATUS InstallProcessProtect();
+VOID UnInstallProcessProtect();
+
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
 #pragma alloc_text (PAGE, KMDFDriver1EvtDeviceAdd)
@@ -94,6 +97,7 @@ Return Value:
     }
 
     InstallSelfProtect();
+    InstallProcessProtect();
 
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
@@ -170,6 +174,7 @@ Return Value:
     //
 
     UnInstallSelfProtect();
+    UnInstallProcessProtect();
 
     WPP_CLEANUP(WdfDriverWdmGetDriverObject((WDFDRIVER)DriverObject));
 }

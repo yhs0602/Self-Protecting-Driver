@@ -61,7 +61,7 @@ ObjectPreCallBack(PVOID RegistrationContext, POB_PRE_OPERATION_INFORMATION Opera
 
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "[ SelfProtect ] [ USER ] ObjectPreCallback ----> Process Name [%s] \n", ProcssName);
 
-	if (!_stricmp(ProcssName, "calc.exe")) {
+	if (!_stricmp(ProcssName, "notepad.exe")) {
 		DbgPrint("[ SelfProtect ] It's notepad \n");
 		if (OperationInformation->Operation == OB_OPERATION_HANDLE_CREATE) {
 

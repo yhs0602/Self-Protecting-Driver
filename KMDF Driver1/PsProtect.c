@@ -9,7 +9,7 @@ VOID ProcessNotifyCallbackEx(
 	UNICODE_STRING ExecutableBlocked[] = {
 		RTL_CONSTANT_STRING(L"*OLLYDBG*.EXE"),
 		RTL_CONSTANT_STRING(L"*MSPAINT*.EXE"),
-		RTL_CONSTANT_STRING(L"*NOTEPAD*.EXE")
+		RTL_CONSTANT_STRING(L"*CALC*.EXE")
 	};
 	ULONG ExecutableCount = sizeof(ExecutableBlocked) / sizeof(UNICODE_STRING);
 
