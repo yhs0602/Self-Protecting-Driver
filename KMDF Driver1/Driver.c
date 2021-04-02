@@ -17,12 +17,24 @@ Environment:
 #include "driver.h"
 #include "driver.tmh"
 
+#pragma comment(lib,  "wdmsec.lib")
+
+
 
 NTSTATUS InstallSelfProtect();
 VOID UnInstallSelfProtect();
 
 NTSTATUS InstallProcessProtect();
 VOID UnInstallProcessProtect();
+
+#define LINK_NAME	L"\\DosDevices\\ZoomPlus"
+#define DEVICE_NAME	L"\\Device\\test"
+
+UNICODE_STRING DeviceLink;
+UNICODE_STRING DeviceName;
+WDFDEVICE wdfDevice;
+
+DECLARE_CONST_UNICODE_STRING(SDDL_DEVOBJ_KERNEL_ONLY, L"D:P");
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
@@ -65,6 +77,9 @@ Return Value:
     NTSTATUS status;
     WDF_OBJECT_ATTRIBUTES attributes;
 
+    PWDFDEVICE_INIT deviceInit;
+    PDEVICE_OBJECT deviceObject;
+
     //
     // Initialize WPP Tracing
     //
@@ -83,11 +98,12 @@ Return Value:
                            KMDFDriver1EvtDeviceAdd
                            );
 
+    WDFDRIVER driver;
     status = WdfDriverCreate(DriverObject,
                              RegistryPath,
                              &attributes,
                              &config,
-                             WDF_NO_HANDLE
+                             &driver
                              );
 
     if (!NT_SUCCESS(status)) {
@@ -96,7 +112,50 @@ Return Value:
         return status;
     }
 
-    InstallSelfProtect();
+    // Allocate a device initialization structure
+    deviceInit =
+        WdfControlDeviceInitAllocate(
+            driver,    &SDDL_DEVOBJ_KERNEL_ONLY
+        );
+
+    // Set the device characteristics
+    WdfDeviceInitSetCharacteristics(
+        deviceInit,
+        FILE_DEVICE_SECURE_OPEN,
+        FALSE
+    );
+
+    status = WdfDeviceInitAssignName(
+        deviceInit,
+        &DeviceName
+    );
+
+    // Create a framework device object
+    status =
+        WdfDeviceCreate(
+            &deviceInit,
+            WDF_NO_OBJECT_ATTRIBUTES,
+            &wdfDevice
+        );
+
+    // Check status
+    if (status == STATUS_SUCCESS) {
+
+        // Initialization of the framework device object is complete
+        WdfControlFinishInitializing(
+            wdfDevice
+        );
+
+        // Get the associated WDM device object
+        deviceObject = WdfDeviceWdmGetDeviceObject(wdfDevice);
+
+        RtlInitUnicodeString(&DeviceLink, LINK_NAME);
+        RtlInitUnicodeString(&DeviceName, DEVICE_NAME);
+        status = IoCreateSymbolicLink(&DeviceLink, &DeviceName);
+    }
+
+
+   // InstallSelfProtect();
     InstallProcessProtect();
 
 
@@ -104,6 +163,9 @@ Return Value:
 
     return status;
 }
+
+WDFDEVICE wdfDevice;
+
 
 NTSTATUS
 KMDFDriver1EvtDeviceAdd(
@@ -173,7 +235,7 @@ Return Value:
     // Stop WPP Tracing
     //
 
-    UnInstallSelfProtect();
+    //UnInstallSelfProtect();
     UnInstallProcessProtect();
 
     WPP_CLEANUP(WdfDriverWdmGetDriverObject((WDFDRIVER)DriverObject));
