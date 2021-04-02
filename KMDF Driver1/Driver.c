@@ -1,254 +1,91 @@
-/*++
-
-Module Name:
-
-	driver.c
-
-Abstract:
-
-	This file contains the driver entry points and callbacks.
-
-Environment:
-
-	Kernel-mode Driver Framework
-
---*/
-
-#include "driver.h"
-#include "driver.tmh"
-
-#pragma comment(lib,  "wdmsec.lib")
-
-
-
-NTSTATUS InstallSelfProtect();
-VOID UnInstallSelfProtect();
-
-NTSTATUS InstallProcessProtect();
-VOID UnInstallProcessProtect();
+#include <ntddk.h>
 
 #define LINK_NAME	L"\\DosDevices\\ZoomPlus"
 #define DEVICE_NAME	L"\\Device\\test"
+#define IOCTL_TEST	CTL_CODE(FILE_DEVICE_UNKNOWN,0x4000,METHOD_BUFFERED,FILE_ANY_ACCESS)
 
+PDEVICE_OBJECT MyDevice;
 UNICODE_STRING DeviceLink;
 UNICODE_STRING DeviceName;
-WDFDEVICE wdfDevice;
 
-DECLARE_CONST_UNICODE_STRING(SDDL_DEVOBJ_KERNEL_ONLY, L"D:P");
-DECLARE_CONST_UNICODE_STRING(
-SDDL_DEVOBJ_SYS_ALL_ADM_RWX_WORLD_R_RES_R,
-L"D:P(A;;GA;;;SY)(A;;GRGWGX;;;BA)(A;;GR;;;WD)(A;;GR;;;RC)"
-);
-
-#ifdef ALLOC_PRAGMA
-#pragma alloc_text (INIT, DriverEntry)
-#pragma alloc_text (PAGE, KMDFDriver1EvtDeviceAdd)
-#pragma alloc_text (PAGE, KMDFDriver1EvtDriverContextCleanup)
-#endif
-
-NTSTATUS
-DriverEntry(
-	_In_ PDRIVER_OBJECT  DriverObject,
-	_In_ PUNICODE_STRING RegistryPath
-)
-/*++
-
-Routine Description:
-	DriverEntry initializes the driver and is the first routine called by the
-	system after the driver is loaded. DriverEntry specifies the other entry
-	points in the function driver, such as EvtDevice and DriverUnload.
-
-Parameters Description:
-
-	DriverObject - represents the instance of the function driver that is loaded
-	into memory. DriverEntry must initialize members of DriverObject before it
-		returns to the caller. DriverObject is allocated by the system before the
-		driver is loaded, and it is released by the system after the system unloads
-		the function driver from memory.
-
-	RegistryPath - represents the driver specific path in the Registry.
-	The function driver can use the path to store driver related data between
-	reboots. The path does not store hardware instance specific data.
-
-Return Value:
-
-	STATUS_SUCCESS if successful,
-	STATUS_UNSUCCESSFUL otherwise.
-
---*/
+NTSTATUS MyIOControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
-	WDF_DRIVER_CONFIG config;
-	NTSTATUS status;
-	WDF_OBJECT_ATTRIBUTES attributes;
+	UNREFERENCED_PARAMETER(DeviceObject);
 
-	PWDFDEVICE_INIT deviceInit;
-	PDEVICE_OBJECT deviceObject;
+	PIO_STACK_LOCATION pStack;
+	NTSTATUS returnStatus = STATUS_SUCCESS;
+	ULONG ControlCode;
 
-	//
-	// Initialize WPP Tracing
-	//
-	WPP_INIT_TRACING(DriverObject, RegistryPath);
+	pStack = IoGetCurrentIrpStackLocation(Irp);
+	ControlCode = pStack->Parameters.DeviceIoControl.IoControlCode;
+	DbgPrint("\n IOCTL Call~~ \n");
 
-	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
-
-	//
-	// Register a cleanup callback so that we can call WPP_CLEANUP when
-	// the framework driver object is deleted during driver unload.
-	//
-	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-	attributes.EvtCleanupCallback = KMDFDriver1EvtDriverContextCleanup;
-
-	WDF_DRIVER_CONFIG_INIT(&config,
-		KMDFDriver1EvtDeviceAdd
-	);
-
-	WDFDRIVER driver;
-	status = WdfDriverCreate(DriverObject,
-		RegistryPath,
-		&attributes,
-		&config,
-		&driver
-	);
-
-	if (!NT_SUCCESS(status)) {
-		TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "WdfDriverCreate failed %!STATUS!", status);
-		WPP_CLEANUP(DriverObject);
-		return status;
+	switch (ControlCode)
+	{
+	case IOCTL_TEST:
+		DbgPrint("\n IOCTL_TEST Call~~ \n");
+		break;
 	}
 
-	// Allocate a device initialization structure
-	deviceInit =
-		WdfControlDeviceInitAllocate(
-			driver, &SDDL_DEVOBJ_SYS_ALL_ADM_RWX_WORLD_R_RES_R
-		);
+	Irp->IoStatus.Status = STATUS_SUCCESS;
+	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-	// Set the device characteristics
-	WdfDeviceInitSetCharacteristics(
-		deviceInit,
-		FILE_DEVICE_SECURE_OPEN,
-		FALSE
-	);
+	return returnStatus;
+}
 
-	status = WdfDeviceInitAssignName(
-		deviceInit,
-		&DeviceName
-	);
+NTSTATUS Create_Handler(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
+{
+	UNREFERENCED_PARAMETER(DeviceObject);
+	Irp->IoStatus.Status = STATUS_SUCCESS;
+	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
-	// Create a framework device object
-	status =
-		WdfDeviceCreate(
-			&deviceInit,
-			WDF_NO_OBJECT_ATTRIBUTES,
-			&wdfDevice
-		);
+	return STATUS_SUCCESS;
+}
 
+VOID OnUnload(IN PDRIVER_OBJECT DriverObject)
+{
+	UNREFERENCED_PARAMETER(DriverObject);
+	IoDeleteDevice(MyDevice);
+	IoDeleteSymbolicLink(&DeviceLink);
 
-	if (!NT_SUCCESS(status)) {
-		TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "WdfDeviceCreate failed %!STATUS!", status);
-		WPP_CLEANUP(DriverObject);
-		return status;
-	}
+	//DbgPrint("OnUnload Call! \n");
+}
 
-	// Initialization of the framework device object is complete
-	WdfControlFinishInitializing(
-		wdfDevice
-	);
-
-	// Get the associated WDM device object
-	deviceObject = WdfDeviceWdmGetDeviceObject(wdfDevice);
+NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING RegistryPath)
+{
+	UNREFERENCED_PARAMETER(RegistryPath);
+	NTSTATUS returnStatus = STATUS_SUCCESS;
 
 	RtlInitUnicodeString(&DeviceLink, LINK_NAME);
 	RtlInitUnicodeString(&DeviceName, DEVICE_NAME);
-	status = IoCreateSymbolicLink(&DeviceLink, &DeviceName);
 
-	if (!NT_SUCCESS(status)) {
-		TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "IoCreateSymbolicLink failed %!STATUS!", status);
-		WPP_CLEANUP(DriverObject);
-		return status;
+	returnStatus = IoCreateDevice(
+		DriverObject,
+		0,
+		&DeviceName,
+		FILE_DEVICE_UNKNOWN,
+		FILE_DEVICE_SECURE_OPEN,
+		FALSE,
+		&MyDevice
+	);
+	if (!NT_SUCCESS(returnStatus))
+	{
+		//DbgPrint("IoCreateDevice Fail! \n");
+		return returnStatus;
 	}
+	//DbgPrint("Success IoCreateDevice \n");
 
-	// InstallSelfProtect();
-	InstallProcessProtect();
+	returnStatus = IoCreateSymbolicLink(&DeviceLink, &DeviceName);
+	if (!NT_SUCCESS(returnStatus))
+	{
+		//DbgPrint("IoCreateSymbolicLink Fail! \n");
+		return returnStatus;
+	}
+	//DbgPrint("Success IoCreateSymbolicLink \n");
 
+	DriverObject->DriverUnload = OnUnload;
+	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = MyIOControl;
+	DriverObject->MajorFunction[IRP_MJ_CREATE] = Create_Handler;
 
-	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
-
-	return status;
-}
-
-WDFDEVICE wdfDevice;
-
-
-NTSTATUS
-KMDFDriver1EvtDeviceAdd(
-	_In_    WDFDRIVER       Driver,
-	_Inout_ PWDFDEVICE_INIT DeviceInit
-)
-/*++
-Routine Description:
-
-	EvtDeviceAdd is called by the framework in response to AddDevice
-	call from the PnP manager. We create and initialize a device object to
-	represent a new instance of the device.
-
-Arguments:
-
-	Driver - Handle to a framework driver object created in DriverEntry
-
-	DeviceInit - Pointer to a framework-allocated WDFDEVICE_INIT structure.
-
-Return Value:
-
-	NTSTATUS
-
---*/
-{
-	NTSTATUS status;
-
-	UNREFERENCED_PARAMETER(Driver);
-
-	PAGED_CODE();
-
-	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
-
-	status = KMDFDriver1CreateDevice(DeviceInit);
-
-	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
-
-	return status;
-}
-
-VOID
-KMDFDriver1EvtDriverContextCleanup(
-	_In_ WDFOBJECT DriverObject
-)
-/*++
-Routine Description:
-
-	Free all the resources allocated in DriverEntry.
-
-Arguments:
-
-	DriverObject - handle to a WDF Driver object.
-
-Return Value:
-
-	VOID.
-
---*/
-{
-	UNREFERENCED_PARAMETER(DriverObject);
-
-	PAGED_CODE();
-
-	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
-
-	//
-	// Stop WPP Tracing
-	//
-
-	//UnInstallSelfProtect();
-	UnInstallProcessProtect();
-
-	WPP_CLEANUP(WdfDriverWdmGetDriverObject((WDFDRIVER)DriverObject));
+	return returnStatus;
 }
