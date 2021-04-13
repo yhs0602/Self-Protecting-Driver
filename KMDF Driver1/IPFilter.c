@@ -1,7 +1,7 @@
 //
-// Created by 양현서 on 2021/04/13.
+// 
 // https://www.hackerschool.org/HS_Boards/data/Lib_kernel/1160630745/050104.pdf
-// 작성자 김기홍 와우해커 세인트 시큐리티 대표이사 :( & )
+// 작성자 김기홍 와우해커 세인트 시큐리티 대표이사
 // www.wowhacker.com
 // www.stsc.co.kr
 // https://docs.microsoft.com/en-us/previous-versions/windows/hardware/network/ff562312(v%3Dvs.85)
@@ -9,9 +9,6 @@
 // https://pastebin.com/tCHqNnJH
 
 #include "IPFilter.h"
-#include <Pfhook.h>
-#include <wdm.h>
-#include <Ntddk.h>
 
 SINGLE_LIST_ENTRY ipListHead;
 
@@ -60,18 +57,20 @@ NTSTATUS SetFilterFunction(PacketFilterExtensionPtr filterFunction) {
         // 우리는 작업 완료
         KeInitializeEvent(&event, NotificationEvent, FALSE);
         // irp를 만들어서 필터 함수를 내보낼 수 있도록 한다
-        irp = IoBuildDeviceIoControlRequest(IOCTL_PF_SET_EXTENSION_POINTER, ipDeviceObject);
+        irp = IoBuildDeviceIoControlRequest(IOCTL_PF_SET_EXTENSION_POINTER, ipDeviceObject, NULL, 0, NULL, 0, FALSE, &event, &ioStatus);
         if (irp != NULL) {
-            // irp 보냄
+            // irp sent
             status = IoCallDriver(ipDeviceObject, irp);
-            // IpFilterDriver 로부터 이벤트 셋 기다림
+            // IpFilterDriver wait
             if (status == STATUS_PENDING) {
                 waitStatus = KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
                 if (waitStatus != STATUS_SUCCESS)
+                    ;
                 // 에러
             }
             status = ioStatus.Status;
             if (!NT_SUCCESS(status))
+                ;
             // 에러
         } else {
             // 실패할 경우 에러를 리턴한다
@@ -102,7 +101,7 @@ PF_FORWARD_ACTION match_by_addr(UINT32 srcAddr, UINT32 destAddr) {
         if (entry->destAddr == -1 && entry->srcAddr == -1) {
             return PF_DROP;
         }
-        entry = CONTAINING_RECORD(entry->SingleListEntry->Next, IP_FILTER_ENTRY, SingleListEntry);
+        entry = CONTAINING_RECORD(entry->SingleListEntry.Next, IP_FILTER_ENTRY, SingleListEntry);
     }
     return PF_FORWARD;
 }
@@ -138,11 +137,11 @@ NTSTATUS MyPacketFilterExtension(
     } else if (type == 6) { // TCP
         PTCP_HEADER ptcpHeader = (PTCP_HEADER) Packet;
         int dataOffset = (unsigned char) (ptcpHeader->offset_ns >> 4);
-        char *realData = ((void *) ptcpHeader) + dataOffset;
+        char *realData = ((char *) ptcpHeader) + dataOffset;
         // cut until packet length and log it
     } else if (type == 17) { // UDP
         PUDP_HEADER pudpHeader = (PUDP_HEADER) Packet;
-        char *realData = ((void *) pudpHeader) + 8;
+        char *realData = ((char *) pudpHeader) + 8;
         // cut until packet length and log it
     }
 

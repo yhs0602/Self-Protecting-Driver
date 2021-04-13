@@ -1,9 +1,12 @@
 //
-// Created by 양현서 on 2021/04/13.
+// 
 //
 
 #ifndef SELF_PROTECTING_DRIVER_IPFILTER_H
 #define SELF_PROTECTING_DRIVER_IPFILTER_H
+#define NDIS630
+#include <ndis.h>
+#include <Pfhook.h>
 
 #pragma pack(push, 1)
 typedef struct _IPV4_HEADER {
@@ -56,7 +59,16 @@ typedef struct {
 
 NTSTATUS SetFilterFunction(PacketFilterExtensionPtr filterFunction);
 
-extern PacketFilterExtensionPtr MyPacketFilterExtension;
+NTSTATUS MyPacketFilterExtension(
+    IN unsigned char* PacketHeader,
+    IN unsigned char* Packet,
+    IN unsigned int PacketLength,
+    IN unsigned int RecvInterfaceIndex,
+    IN unsigned int SendInterfaceIndex,
+    IN IPAddr RecvLinkNextHop,
+    IN IPAddr SendLinkNextHop
+);
+
 
 NTSTATUS AddFilterToList(UINT32 srcAddr, UINT32 destAddr);
 

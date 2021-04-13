@@ -3,11 +3,11 @@
 
 #define LINK_NAME    L"\\DosDevices\\ZoomPlus"
 #define DEVICE_NAME    L"\\Device\\test"
-#define IOCTL_TEST    CTL_CODE(FILE_DEVICE_UNKNOWN,0x4000,METHOD_BUFFERED,FILE_ANY_ACCESS)
-#define IOCTL_START_IP_HOOK    CTL_CODE(FILE_DEVICE_UNKNOWN,0x4000,METHOD_BUFFERED,FILE_ANY_ACCESS)
-#define IOCTL_STOP_IP_HOOK    CTL_CODE(FILE_DEVICE_UNKNOWN,0x4000,METHOD_BUFFERED,FILE_ANY_ACCESS)
-#define IOCTL_ADD_FILTER    CTL_CODE(FILE_DEVICE_UNKNOWN,0x4000,METHOD_BUFFERED,FILE_ANY_ACCESS)
-#define IOCTL_CLEAR_FILTER    CTL_CODE(FILE_DEVICE_UNKNOWN,0x4000,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_TEST    CTL_CODE(FILE_DEVICE_UNKNOWN,0x1000,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_START_IP_HOOK    CTL_CODE(FILE_DEVICE_UNKNOWN,0x1001,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_STOP_IP_HOOK    CTL_CODE(FILE_DEVICE_UNKNOWN,0x1002,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_ADD_FILTER    CTL_CODE(FILE_DEVICE_UNKNOWN,0x1003,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_CLEAR_FILTER    CTL_CODE(FILE_DEVICE_UNKNOWN,0x1004,METHOD_BUFFERED,FILE_ANY_ACCESS)
 
 PDEVICE_OBJECT MyDevice;
 UNICODE_STRING DeviceLink;
@@ -30,16 +30,16 @@ NTSTATUS MyIOControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp) {
             DbgPrint("\n IOCTL_TEST Call~~ \n");
             break;
         case IOCTL_START_IP_HOOK:
-            SetFilterFunction(MyPacketFilterExtension); // 필터링 함수 등록
+            SetFilterFunction(MyPacketFilterExtension); // Register filter function
             break;
         case IOCTL_STOP_IP_HOOK:
             SetFilterFunction(NULL); // Unregister
             break;
         case IOCTL_ADD_FILTER:
-            if (inputBufferLength == sizeof(IPFilter)) {
-                IPFilter *nf;
-                nf = (IPFilter *) ioBuffer;
-                AddFilterToList(nf);
+            if (pStack->Parameters.DeviceIoControl.InputBufferLength == 8) {
+                UINT32* addrs = (PUINT32)Irp->AssociatedIrp.SystemBuffer;
+                DbgPrint("\n IOCTL_ADD_FILTER Call~~ %u %u \n", addrs[0], addrs[1]);
+                AddFilterToList(addrs[0], addrs[1]);
             }
             break;
         case IOCTL_CLEAR_FILTER:

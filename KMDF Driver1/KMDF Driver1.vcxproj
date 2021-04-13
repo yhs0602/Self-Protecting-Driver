@@ -40,6 +40,7 @@
   <ItemGroup>
     <ClCompile Include="Device.c" />
     <ClCompile Include="Driver.c" />
+    <ClCompile Include="IPFilter.c" />
     <ClCompile Include="PsProtect.c" />
     <ClCompile Include="Queue.c" />
     <ClCompile Include="RegMonitor.c" />
@@ -48,6 +49,7 @@
   <ItemGroup>
     <ClInclude Include="Device.h" />
     <ClInclude Include="Driver.h" />
+    <ClInclude Include="IPFilter.h" />
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
     <ClInclude Include="Trace.h" />
