@@ -6,11 +6,39 @@
 // www.stsc.co.kr
 // https://docs.microsoft.com/en-us/previous-versions/windows/hardware/network/ff562312(v%3Dvs.85)
 // https://docs.microsoft.com/en-us/previous-versions/windows/hardware/network/ff548976(v=vs.85)
+// https://pastebin.com/tCHqNnJH
 
 #include "IPFilter.h"
 #include <Pfhook.h>
 #include <wdm.h>
 #include <Ntddk.h>
+
+SINGLE_LIST_ENTRY ipListHead;
+
+void PushIpFilterEntry(PSINGLE_LIST_ENTRY ListHead, PIP_FILTER_ENTRY Entry) {
+    PushEntryList(&ipListHead, &(Entry->SingleListEntry));
+}
+
+PIP_FILTER_ENTRY PopIpFilterEntry(PSINGLE_LIST_ENTRY ListHead) {
+    PSINGLE_LIST_ENTRY SingleListEntry;
+    SingleListEntry = PopEntryList(&ipListHead);
+    return CONTAINING_RECORD(SingleListEntry, IP_FILTER_ENTRY, SingleListEntry);
+}
+
+NTSTATUS AddFilterToList(UINT32 srcAddr, UINT32 destAddr) {
+    PIP_FILTER_ENTRY allocated = ExAllocatePoolZero(POOL_COLD_ALLOCATION, sizeof(IP_FILTER_ENTRY), "ll");
+    allocated->srcAddr = srcAddr;
+    allocated->destAddr = destAddr;
+    PushIpFilterEntry(&ipListHead, allocated);
+}
+
+VOID ClearFilters() {
+    PIP_FILTER_ENTRY entry = NULL;
+    while (entry = PopIpFilterEntry(&ipListHead) != NULL) {
+        ExFreePool(entry);
+    }
+}
+
 
 NTSTATUS SetFilterFunction(PacketFilterExtensionPtr filterFunction) {
     NTSTATUS status = STATUS_SUCCESS, waitStatus = STATUS_SUCCESS;
@@ -59,6 +87,10 @@ NTSTATUS SetFilterFunction(PacketFilterExtensionPtr filterFunction) {
         return status;
 }
 
+NTSTATUS match_by_addr(UINT32 srcAddr, UINT32 destAddr) {
+
+}
+
 
 NTSTATUS MyPacketFilterExtension(
 // IP 패킷 헤더
@@ -80,6 +112,13 @@ NTSTATUS MyPacketFilterExtension(
 // 장치가 보낼 주소
         IN IPAddr SendLinkNextHop
 ) {
+    PIPV4_HEADER pipv4Header = (PIPV4_HEADER) PacketHeader;
+    int srcAddr = pipv4Header->SourceAddress;
+    int destAddr = pipv4Header->DestinationAddress;
+    NTSTATUS result;
+    if (result = match_by_addr(srcAddr, destAddr) != PF_PASS) {
+        return result;
+    }
     return PF_FORWARD;
 }
 
@@ -120,3 +159,27 @@ NTSTATUS MyPacketFilterExtension(
 //패킷을 그냥 통과 시킨다 에 넣지는 않지만 시스템 드라이버 내부는 통과 하게 . IP Stack
 //된다 하지만 에 값을 넣지 않기 때문에 어플리케이션에서는 정상적인 패킷 데이 . IP Stack
 //터를 받지 못하는 것으로 나온다.
+
+// https://www.daniweb.com/programming/software-development/threads/200708/how-to-convert-uint32-to-ip-address-dot-format
+// okay, well before you get into the gory details of using winsock for network programming with C, you should understand the basic exercise of converting one number system to another number system, using bitwise operators.
+//
+//consider the address:
+//10.1.10.127
+//
+//if you convert each octet to a binary group
+//
+//10         1        10       127
+//00001010  00000001  00001010  01111111
+//then the 32 bit binary number as one single integer has the decimal value.
+//
+//1010000000010000101001111111(bin) = 167840383(dec)
+//
+//you can programmatically convert between these number systems in either direction. consider (and understand) this snippet:
+//
+//unsigned int  ipAddress = 167840383;
+//unsigned char octet[4]  = {0,0,0,0};
+//
+//for (i=0; i<4; i++)
+//{
+//    octet[i] = ( ipAddress >> (i*8) ) & 0xFF;
+//}
