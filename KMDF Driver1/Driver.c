@@ -30,7 +30,7 @@ NTSTATUS MyIOControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp) {
             DbgPrint("\n IOCTL_TEST Call~~ \n");
             break;
         case IOCTL_START_IP_HOOK:
-            SetFilterFunction(cbFilterFunction); // 필터링 함수 등록
+            SetFilterFunction(MyPacketFilterExtension); // 필터링 함수 등록
             break;
         case IOCTL_STOP_IP_HOOK:
             SetFilterFunction(NULL); // Unregister
@@ -94,14 +94,14 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING Registry
         //DbgPrint("IoCreateDevice Fail! \n");
         return returnStatus;
     }
-    //DbgPrint("Success IoCreateDevice \n");
+    // DbgPrint("Success IoCreateDevice \n");
 
     returnStatus = IoCreateSymbolicLink(&DeviceLink, &DeviceName);
     if (!NT_SUCCESS(returnStatus)) {
         //DbgPrint("IoCreateSymbolicLink Fail! \n");
         return returnStatus;
     }
-    //DbgPrint("Success IoCreateSymbolicLink \n");
+    // DbgPrint("Success IoCreateSymbolicLink \n");
 
     DriverObject->DriverUnload = OnUnload;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = MyIOControl;
