@@ -87,8 +87,24 @@ NTSTATUS SetFilterFunction(PacketFilterExtensionPtr filterFunction) {
         return status;
 }
 
-NTSTATUS match_by_addr(UINT32 srcAddr, UINT32 destAddr) {
-
+PF_FORWARD_ACTION match_by_addr(UINT32 srcAddr, UINT32 destAddr) {
+    PIP_FILTER_ENTRY entry = CONTAINING_RECORD(&ipListHead, IP_FILTER_ENTRY, SingleListEntry);
+    while (entry != NULL) {
+        if (entry->srcAddr == srcAddr && entry->destAddr == destAddr) {
+            return PF_DROP;
+        }
+        if (entry->srcAddr == -1 && entry->destAddr == destAddr) {
+            return   PF_DROP;
+        }
+        if (entry->destAddr == -1 && entry->srcAddr == srcAddr) {
+            return PF_DROP;
+        }
+        if (entry->destAddr == -1 && entry->srcAddr == -1) {
+            return PF_DROP;
+        }
+        entry = CONTAINING_RECORD(entry->SingleListEntry->Next, IP_FILTER_ENTRY, SingleListEntry);
+    }
+    return PF_FORWARD;
 }
 
 
