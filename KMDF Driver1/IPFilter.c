@@ -5,6 +5,7 @@
 // www.wowhacker.com
 // www.stsc.co.kr
 // https://docs.microsoft.com/en-us/previous-versions/windows/hardware/network/ff562312(v%3Dvs.85)
+// https://docs.microsoft.com/en-us/previous-versions/windows/hardware/network/ff548976(v=vs.85)
 
 #include "IPFilter.h"
 #include <Pfhook.h>
@@ -57,3 +58,65 @@ NTSTATUS SetFilterFunction(PacketFilterExtensionPtr filterFunction) {
         // 포인터 가져오는 동안 오류
         return status;
 }
+
+
+NTSTATUS MyPacketFilterExtension(
+// IP 패킷 헤더
+        IN unsigned char *PacketHeader,
+// 헤더를 포함하지 않는 패킷
+        IN unsigned char *Packet,
+// IP 패킷 헤더의 길이를 제외한 패킷 길이
+        IN unsigned int PacketLength,
+// ( ) 장치 인덱스 몇 번째 장치 인지
+// 받은 패킷에 대해서
+        IN unsigned int RecvInterfaceIndex,
+// ( ) 장치 인덱스 몇 번째 장치 인지
+// 보내는 패킷에 대해서
+        IN unsigned int SendInterfaceIndex,
+// IP 주소 형태
+// 장치가 받은 주소
+        IN IPAddr RecvLinkNextHop,
+// IP 주소 형태
+// 장치가 보낼 주소
+        IN IPAddr SendLinkNextHop
+) {
+    return PF_FORWARD;
+}
+
+// typedef struct IPHeader { UCHAR iph_verlen; UCHAR iph_tos; USHORT iph_length;
+//        USHORT iph_id; USHORT iph_offset; UCHAR iph_ttl; UCHAR iph_protocol; USHORT iph_xsum; ULONG iph_src;
+//        ULONG iph_dest; } IPHeader;
+
+// typedef PF_FORWARD_ACTION (*PacketFilterExtensionPtr)(
+//// IP 패킷 헤더
+//IN unsigned char *PacketHeader,
+//// 헤더를 포함하지 않는 패킷
+//IN unsigned char *Packet,
+//// IP 패킷 헤더의 길이를 제외한 패킷 길이
+//IN unsigned int PacketLength,
+//// ( ) 장치 인덱스 몇 번째 장치 인지
+//// 받은 패킷에 대해서
+//IN unsigned int RecvInterfaceIndex,
+//// ( ) 장치 인덱스 몇 번째 장치 인지
+//// 보내는 패킷에 대해서
+//IN unsigned int SendInterfaceIndex,
+//// IP 주소 형태
+//// 장치가 받은 주소
+//IN IPAddr RecvLinkNextHop,
+//// IP 주소 형태
+//// 장치가 보낼 주소
+//IN IPAddr SendLinkNextHop
+//);
+
+// PF_FORWARD_ACTION . 은 아래와 같은 결과 값을 가질 수 있게 된다
+//• PF_FORWARD
+//패킷을 정상적으로 처리 하기 위해 시스템 상의 에 값을 넣는다 넣게 되면 해 IP Stack .
+//당 패킷은 처리를 하기 위한 어플리케이션으로 넘어가게 되며 해당 어플리케이션에서는 받
+//은 정보를 가지고 적절한 처리를 하게 된다.
+//• PF_DROP
+//패킷을 드롭 하게 된다 시스템 상의 에 해당 포인터를 넘겨 주지 않고 폐기를
+//함으로써 어플리케이션은 해당 패킷을 받지 못하게 된다.
+//• PF_PASS
+//패킷을 그냥 통과 시킨다 에 넣지는 않지만 시스템 드라이버 내부는 통과 하게 . IP Stack
+//된다 하지만 에 값을 넣지 않기 때문에 어플리케이션에서는 정상적인 패킷 데이 . IP Stack
+//터를 받지 못하는 것으로 나온다.
