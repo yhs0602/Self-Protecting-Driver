@@ -94,7 +94,7 @@ PF_FORWARD_ACTION match_by_addr(UINT32 srcAddr, UINT32 destAddr) {
             return PF_DROP;
         }
         if (entry->srcAddr == -1 && entry->destAddr == destAddr) {
-            return   PF_DROP;
+            return PF_DROP;
         }
         if (entry->destAddr == -1 && entry->srcAddr == srcAddr) {
             return PF_DROP;
@@ -131,6 +131,21 @@ NTSTATUS MyPacketFilterExtension(
     PIPV4_HEADER pipv4Header = (PIPV4_HEADER) PacketHeader;
     int srcAddr = pipv4Header->SourceAddress;
     int destAddr = pipv4Header->DestinationAddress;
+    int type = pipv4Header->TypeOfService;
+    if (type == 1) { // ICMP
+        PICMP_HEADER picmpHeader = (PICMP_HEADER) Packet;
+        // 딱히 파싱 필요 없어보임
+    } else if (type == 6) { // TCP
+        PTCP_HEADER ptcpHeader = (PTCP_HEADER) Packet;
+        int dataOffset = (unsigned char) (ptcpHeader->offset_ns >> 4);
+        char *realData = ((void *) ptcpHeader) + dataOffset;
+        // cut until packet length and log it
+    } else if (type == 17) { // UDP
+        PUDP_HEADER pudpHeader = (PUDP_HEADER) Packet;
+        char *realData = ((void *) pudpHeader) + 8;
+        // cut until packet length and log it
+    }
+
     NTSTATUS result;
     if (result = match_by_addr(srcAddr, destAddr) != PF_PASS) {
         return result;
