@@ -59,7 +59,7 @@ typedef struct {
 
 NTSTATUS SetFilterFunction(PacketFilterExtensionPtr filterFunction);
 
-NTSTATUS MyPacketFilterExtension(
+PF_FORWARD_ACTION MyPacketFilterExtension(
     IN unsigned char* PacketHeader,
     IN unsigned char* Packet,
     IN unsigned int PacketLength,
