@@ -24,33 +24,54 @@ NTSTATUS MyIOControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp) {
     pStack = IoGetCurrentIrpStackLocation(Irp);
     ControlCode = pStack->Parameters.DeviceIoControl.IoControlCode;
     DbgPrint("\n IOCTL Call~~ \n");
+    Irp->IoStatus.Status = STATUS_INVALID_PARAMETER;
 
     switch (ControlCode) {
         case IOCTL_TEST:
             DbgPrint("\n IOCTL_TEST Call~~ \n");
+            Irp->IoStatus.Status = STATUS_SUCCESS;
             break;
         case IOCTL_START_IP_HOOK:
-            SetFilterFunction(MyPacketFilterExtension); // Register filter function
+            DbgPrint("\n IOCTL_START Call~~! \n");
+            SetFilterFunction(cbFilterFunction); // Register filter function
+            Irp->IoStatus.Status = STATUS_SUCCESS;
             break;
         case IOCTL_STOP_IP_HOOK:
+            DbgPrint("\n IOCTL_STOP Call~~ \n");
             SetFilterFunction(NULL); // Unregister
+            Irp->IoStatus.Status = STATUS_SUCCESS;
             break;
         case IOCTL_ADD_FILTER:
-            if (pStack->Parameters.DeviceIoControl.InputBufferLength == 8) {
-                UINT32* addrs = (PUINT32)Irp->AssociatedIrp.SystemBuffer;
-                DbgPrint("\n IOCTL_ADD_FILTER Call~~ %u %u \n", addrs[0], addrs[1]);
-                AddFilterToList(addrs[0], addrs[1]);
+            if (pStack->Parameters.DeviceIoControl.InputBufferLength == sizeof(IPFilter))
+            {
+                IPFilter* nf;
+
+                nf = (IPFilter*)Irp->AssociatedIrp.SystemBuffer;
+
+                AddFilterToList(nf);
+                DbgPrint("\n IOCTL_ADD_FILTER Call~~ %u %u \n", nf->destinationIp, nf->sourceIp);
             }
+            else {
+                Irp->IoStatus.Status = STATUS_INVALID_PARAMETER;
+                DbgPrint("\n IOCTL ERROR ROR ROR OR  Call~~ req: %u real: %u \n", sizeof(IPFilter), pStack->Parameters.DeviceIoControl.InputBufferLength);
+
+            }
+            //    AddFilterToList(addrs[0], addrs[1]);
+            
             break;
         case IOCTL_CLEAR_FILTER:
-            ClearFilters();
+            ClearFilterList();
+            DbgPrint("\n IOCTL CLEAR   Call~~ \n");
+
             break;
         default:
+            DbgPrint("\n IOCTL ELSE~~ \n");
+
             Irp->IoStatus.Status = STATUS_INVALID_PARAMETER;
             break;
     }
+    DbgPrint("\n IOCTL DONE~~ \n");
 
-    Irp->IoStatus.Status = STATUS_SUCCESS;
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
     return returnStatus;
@@ -67,7 +88,7 @@ NTSTATUS Create_Handler(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp) {
 VOID OnUnload(IN PDRIVER_OBJECT DriverObject) {
     UNREFERENCED_PARAMETER(DriverObject);
     SetFilterFunction(NULL);
-    ClearFilters();
+    ClearFilterList();
     IoDeleteDevice(MyDevice);
     IoDeleteSymbolicLink(&DeviceLink);
 
