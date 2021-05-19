@@ -45,6 +45,9 @@
     <ClInclude Include="IPFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PSFilter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Device.c">
@@ -66,6 +69,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="IPFilter.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PSFilter.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
