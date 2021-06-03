@@ -62,9 +62,6 @@
     <ClCompile Include="SelfProtect.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RegMonitor.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PsProtect.c">
       <Filter>Source Files</Filter>
     </ClCompile>

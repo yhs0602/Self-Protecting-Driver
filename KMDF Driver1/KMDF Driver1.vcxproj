@@ -44,7 +44,6 @@
     <ClCompile Include="PSFilter.c" />
     <ClCompile Include="PsProtect.c" />
     <ClCompile Include="Queue.c" />
-    <ClCompile Include="RegMonitor.c" />
     <ClCompile Include="SelfProtect.c" />
   </ItemGroup>
   <ItemGroup>
